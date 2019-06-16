@@ -1,0 +1,113 @@
+WHITESPACE = _{ WHITE_SPACE }
+
+COMMENT = _{
+  ( "//" ~ (!NEWLINE ~ ANY)* ) |
+  ( "/*" ~ (!"*/" ~ ANY)* ~ "*/" )
+}
+
+// Horizontal space
+hs = _{ ( " " | "\t" )+ }
+
+boolean = { "false" | "true" }
+
+integer = @{ "0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+
+string = ${
+  PUSH( "'" | "\"" ) ~
+  (
+    ( !( PEEK | "\\" | NEWLINE ) ~ ANY )+ |
+    string_escape |
+    string_hex_escape |
+    string_unicode_escape
+  )* ~
+  POP
+}
+string_escape = @{ "\\" ~ ( "\\" | "'" | "\"" | "n" | "t" ) }
+string_hex_escape = @{ "\\x" ~ ASCII_HEX_DIGIT{2} }
+string_unicode_escape = @{ "\\u" ~ ASCII_HEX_DIGIT{4} }
+
+ident = @{ ( ASCII_ALPHANUMERIC | "_" )+ }
+
+attrs = !{
+  "[" ~
+  ( attr_pair ~ "," )* ~
+  ( attr_pair )? ~
+  "]"
+}
+attr_pair = ${ ident ~ hs? ~ "=" ~ hs? ~ ( boolean | integer | string ) }
+
+pointer_type = ${ "*" ~ type_expr }
+
+vector_type = ${ "[]" ~ type_expr }
+
+array_type = ${ "[" ~ integer ~ "]" ~ type_expr }
+
+struct_type = ${
+  "struct" ~ hs? ~ struct_body
+}
+struct_body = !{
+  "{" ~
+  ( struct_field )* ~
+  "}"
+}
+struct_field = ${
+  (
+    ident ~ hs ~ type_expr | 
+    type_expr
+  ) ~
+  ( hs ~ attrs )?
+}
+
+type_expr = _{
+  pointer_type |
+  vector_type |
+  array_type |
+  struct_type |
+  ident
+}
+
+type_def = ${
+  "type" ~ hs ~ ident ~ hs ~ type_expr ~ ( hs ~ attrs )?
+}
+
+global_decl = ${
+  "global" ~ hs ~ ident ~ hs ~ type_expr ~ ( hs ~ attrs )?
+}
+
+func_decl = ${
+  "func" ~ hs ~ ident ~ hs? ~
+  func_args ~ hs? ~
+  ( "->" ~ hs? ~ type_expr )? ~
+  ( hs? ~ attrs )?
+}
+func_args = !{
+  "(" ~
+  (
+    func_arg ~
+    ( "," ~ func_arg )* ~
+    ","?
+  )? ~
+  ")"
+}
+func_arg = {
+  ident ~ type_expr |
+  type_expr
+}
+
+export_block = ${ "export" ~ hs? ~ block_body }
+import_block = ${ "import" ~ hs ~ ident ~ hs? ~ block_body }
+block_body = !{
+  "{" ~
+  ( global_decl | func_decl )* ~
+  "}"
+}
+
+main_non_export = _{ type_def | import_block }
+
+main = {
+  SOI ~
+  ( main_non_export )* ~
+  ( export_block )? ~
+  ( main_non_export )* ~
+  EOI
+}
