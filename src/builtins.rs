@@ -1,3 +1,4 @@
+use super::model;
 use super::parser;
 
 const IDL: &str = r#"
@@ -20,7 +21,7 @@ type float64 f64 [ kind = 'float', float = 64 ]
 
 // Void type
 
-// Void is a zero-sized type used a placeholder for e.g. Pointers.
+// Void is a zero-sized type used as a placeholder for e.g. pointers.
 type void [0]i32 [ kind = 'void' ]
 
 // Memory types
@@ -46,6 +47,7 @@ type json   vector [ vector = 'uint8', encoding = 'json' ]
 
 "#;
 
-pub fn parse_types() -> Vec<parser::model::LabeledType<'static>> {
-    parser::parse_builtin_types(IDL)
+pub fn parse_types() -> Vec<model::LabeledType<'static>> {
+    // TODO: error message
+    parser::parse_builtin_types(IDL).expect("failed parsing builtins")
 }

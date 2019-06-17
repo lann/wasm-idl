@@ -10,21 +10,21 @@ hs = _{ ( " " | "\t" )+ }
 
 boolean = { "false" | "true" }
 
-integer = @{ "0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+integer = @{ "-"? ~ non_negative_integer }
+non_negative_integer = @{ "0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 
 string = ${
   PUSH( "'" | "\"" ) ~
   (
-    ( !( PEEK | "\\" | NEWLINE ) ~ ANY )+ |
-    string_escape |
-    string_hex_escape |
-    string_unicode_escape
+    string_chars |
+    "\\u" ~ string_unicode_escape |
+    "\\" ~ string_special_escape
   )* ~
   POP
 }
-string_escape = @{ "\\" ~ ( "\\" | "'" | "\"" | "n" | "t" ) }
-string_hex_escape = @{ "\\x" ~ ASCII_HEX_DIGIT{2} }
-string_unicode_escape = @{ "\\u" ~ ASCII_HEX_DIGIT{4} }
+string_chars = @{ ( !( PEEK | "\\" | NEWLINE ) ~ ANY )+ }
+string_unicode_escape = @{ ASCII_HEX_DIGIT{4} }
+string_special_escape = @{ !NEWLINE ~ ANY }
 
 ident = @{ ( ASCII_ALPHANUMERIC | "_" )+ }
 
@@ -40,7 +40,7 @@ pointer_type = ${ "*" ~ type_expr }
 
 vector_type = ${ "[]" ~ type_expr }
 
-array_type = ${ "[" ~ integer ~ "]" ~ type_expr }
+array_type = ${ "[" ~ non_negative_integer ~ "]" ~ type_expr }
 
 struct_type = ${
   "struct" ~ hs? ~ struct_body
